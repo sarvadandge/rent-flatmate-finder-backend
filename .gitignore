@@ -1,4 +1,4 @@
 node_modules
 .env
 uploads
-/src/generated/prisma
+/src/generated

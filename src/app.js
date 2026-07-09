@@ -1,5 +1,5 @@
-const express = require("express");
-const cors = require("cors");
+import express from "express";
+import cors from "cors";
 
 const app = express();
 
@@ -7,10 +7,10 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
-    res.json({
-        success: true,
-        message: "Rent & Flatmate Finder API is running"
-    });
+  res.json({
+    success: true,
+    message: "Rent & Flatmate Finder API is running",
+  });
 });
 
-module.exports = app;
+export default app;

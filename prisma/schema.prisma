@@ -1,13 +1,174 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
+  output   = "../src/generated/client"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  OWNER
+  TENANT
+}
+
+enum RoomType {
+  SINGLE
+  DOUBLE
+  TRIPLE
+  SHARED
+  STUDIO
+  OTHER
+}
+
+enum FurnishingStatus {
+  UNFURNISHED
+  SEMI_FURNISHED
+  FULLY_FURNISHED
+}
+
+enum InterestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model User {
+  id       String @id @default(cuid())
+  name     String
+  email    String @unique
+  password String
+  role     Role
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  tenantProfile TenantProfile?
+
+  ownedListings RoomListing[] @relation("OwnerListings")
+
+  messages Message[] @relation("UserMessages")
+}
+
+model TenantProfile {
+  id String @id @default(cuid())
+
+  preferredLocation String
+  minBudget         Int
+  maxBudget         Int
+  moveInDate        DateTime
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  compatibilityScores CompatibilityScore[]
+  interestRequests    InterestRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RoomListing {
+  id String @id @default(cuid())
+
+  title       String
+  description String
+
+  location String
+  rent     Int
+
+  availableFrom DateTime
+
+  roomType         RoomType
+  furnishingStatus FurnishingStatus
+
+  isFilled Boolean @default(false)
+
+  ownerId String
+  owner   User @relation("OwnerListings", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  images ListingImage[]
+
+  compatibilityScores CompatibilityScore[]
+
+  interestRequests InterestRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ListingImage {
+  id String @id @default(cuid())
+
+  imageUrl String
+
+  listingId String
+  listing   RoomListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model CompatibilityScore {
+  id String @id @default(cuid())
+
+  tenantId String
+  tenant   TenantProfile @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  listingId String
+  listing   RoomListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  score Int
+
+  explanation String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, listingId])
+}
+
+model InterestRequest {
+  id String @id @default(cuid())
+
+  tenantId String
+  tenant   TenantProfile @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  listingId String
+  listing   RoomListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  status InterestStatus @default(PENDING)
+
+  chatRoom ChatRoom?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, listingId])
+}
+
+model ChatRoom {
+  id String @id @default(cuid())
+
+  interestRequestId String @unique
+  interestRequest   InterestRequest @relation(fields: [interestRequestId], references: [id], onDelete: Cascade)
+
+  messages Message[]
+
+  createdAt DateTime @default(now())
+}
+
+model Message {
+  id String @id @default(cuid())
+
+  chatRoomId String
+  chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+
+  senderId String
+  sender   User @relation("UserMessages", fields: [senderId], references: [id])
+
+  content String
+
+  createdAt DateTime @default(now())
 }
