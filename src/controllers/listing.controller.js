@@ -4,6 +4,7 @@ import { HTTP_STATUS } from "../constants/http-status.constants.js";
 
 import { createListing } from "../services/listing.service.js";
 import { getOwnerListings } from "../services/listing.service.js";
+import { getListingById } from "../services/listing.service.js";
 
 export const createRoomListing = asyncHandler(async (req, res) => {
     const listing = await createListing(
@@ -30,4 +31,18 @@ export const getMyListings = asyncHandler(async (req, res) => {
             "Owner listings fetched successfully"
         )
     );
-}); 
+});
+
+export const getListingDetails = asyncHandler(async (req, res) => {
+    const listing = await getListingById(
+        req.params.listingId
+    );
+
+    return res.status(HTTP_STATUS.OK).json(
+        new ApiResponse(
+            HTTP_STATUS.OK,
+            listing,
+            "Listing fetched successfully"
+        )
+    );
+});

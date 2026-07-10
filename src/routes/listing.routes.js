@@ -6,7 +6,7 @@ import { validate } from "../middleware/validate.middleware.js";
 
 import { listingSchema } from "../validators/listing.validator.js";
 
-import { createRoomListing, getMyListings } from "../controllers/listing.controller.js";
+import { createRoomListing, getListingDetails, getMyListings } from "../controllers/listing.controller.js";
 
 const router = express.Router();
 
@@ -23,6 +23,13 @@ router.get(
     authMiddleware,
     authorize("OWNER"),
     getMyListings
+);
+
+router.get(
+    "/:listingId",
+    authMiddleware,
+    authorize("OWNER", "TENANT"),
+    getListingDetails
 );
 
 export default router;

@@ -24,3 +24,30 @@ export const getOwnerListings = async (ownerId) => {
         },
     });
 };
+
+export const getListingById = async (listingId) => {
+    const listing = await prisma.roomListing.findUnique({
+        where: {
+            id: listingId,
+        },
+        include: {
+            owner: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                },
+            },
+            images: true,
+        },
+    });
+
+    if (!listing) {
+        throw new ApiError(
+            HTTP_STATUS.NOT_FOUND,
+            "Listing not found"
+        );
+    }
+
+    return listing;
+};
