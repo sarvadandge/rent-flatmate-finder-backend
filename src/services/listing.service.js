@@ -59,32 +59,26 @@ export const updateListing = async (
     ownerId,
     listingData
 ) => {
-    const listing = await prisma.roomListing.findUnique({
-        where: {
-            id: listingId,
-        },
-    });
-
-
-    if (!listing) {
-        throw new ApiError(
-            HTTP_STATUS.NOT_FOUND,
-            "Listing not found"
-        );
-    }
-
-    if (listing.ownerId !== ownerId) {
-        throw new ApiError(
-            HTTP_STATUS.FORBIDDEN,
-            "You are not allowed to update this listing"
-        );
-    }
+    await findOwnerListing(listingId, ownerId);
 
     return prisma.roomListing.update({
         where: {
             id: listingId,
         },
         data: listingData,
+    });
+};
+
+export const deleteListing = async (
+    listingId,
+    ownerId
+) => {
+    await findOwnerListing(listingId, ownerId);
+
+    await prisma.roomListing.delete({
+        where: {
+            id: listingId,
+        },
     });
 };
 

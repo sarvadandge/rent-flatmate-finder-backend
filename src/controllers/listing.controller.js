@@ -6,6 +6,7 @@ import { createListing } from "../services/listing.service.js";
 import { getOwnerListings } from "../services/listing.service.js";
 import { getListingById } from "../services/listing.service.js";
 import { updateListing } from "../services/listing.service.js";
+import { deleteListing } from "../services/listing.service.js";
 
 export const createRoomListing = asyncHandler(async (req, res) => {
     const listing = await createListing(
@@ -60,6 +61,21 @@ export const updateRoomListing = asyncHandler(async (req, res) => {
             HTTP_STATUS.OK,
             listing,
             "Listing updated successfully"
+        )
+    );
+});
+
+export const deleteRoomListing = asyncHandler(async (req, res) => {
+    await deleteListing(
+        req.params.listingId,
+        req.user.id
+    );
+
+    return res.status(HTTP_STATUS.OK).json(
+        new ApiResponse(
+            HTTP_STATUS.OK,
+            null,
+            "Listing deleted successfully"
         )
     );
 });
