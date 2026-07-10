@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const createTenantProfileSchema = z
+export const tenantProfileSchema = z
     .object({
         preferredLocation: z
             .string()
