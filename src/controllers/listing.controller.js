@@ -3,6 +3,7 @@ import ApiResponse from "../utils/ApiResponse.js";
 import { HTTP_STATUS } from "../constants/http-status.constants.js";
 
 import { createListing } from "../services/listing.service.js";
+import { getOwnerListings } from "../services/listing.service.js";
 
 export const createRoomListing = asyncHandler(async (req, res) => {
     const listing = await createListing(
@@ -18,3 +19,15 @@ export const createRoomListing = asyncHandler(async (req, res) => {
         )
     );
 });
+
+export const getMyListings = asyncHandler(async (req, res) => {
+    const listings = await getOwnerListings(req.user.id);
+
+    return res.status(HTTP_STATUS.OK).json(
+        new ApiResponse(
+            HTTP_STATUS.OK,
+            listings,
+            "Owner listings fetched successfully"
+        )
+    );
+}); 

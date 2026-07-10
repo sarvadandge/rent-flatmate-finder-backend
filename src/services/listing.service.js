@@ -10,3 +10,17 @@ export const createListing = async (ownerId, listingData) => {
 
     return listing;
 };
+
+export const getOwnerListings = async (ownerId) => {
+    return prisma.roomListing.findMany({
+        where: {
+            ownerId,
+        },
+        include: {
+            images: true,
+        },
+        orderBy: {
+            createdAt: "desc",
+        },
+    });
+};
