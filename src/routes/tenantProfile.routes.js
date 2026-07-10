@@ -4,7 +4,7 @@ import authMiddleware from "../middleware/auth.middleware.js";
 import authorize from "../middleware/authorize.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
 
-import { createProfile } from "../controllers/tenantProfile.controller.js";
+import { createProfile, getProfile } from "../controllers/tenantProfile.controller.js";
 
 import { createTenantProfileSchema } from "../validators/tenantProfile.validator.js";
 
@@ -18,4 +18,10 @@ router.post(
   createProfile
 );
 
+router.get(
+  "/",
+  authMiddleware,
+  authorize("TENANT"),
+  getProfile
+);
 export default router;

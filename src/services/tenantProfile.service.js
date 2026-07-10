@@ -27,3 +27,20 @@ export const createTenantProfile = async (userId, profileData) => {
 
   return profile;
 };
+
+export const getTenantProfile = async (userId) => {
+  const profile = await prisma.tenantProfile.findUnique({
+    where: {
+      userId,
+    },
+  });
+
+  if (!profile) {
+    throw new ApiError(
+      HTTP_STATUS.NOT_FOUND,
+      "Tenant profile not found"
+    );
+  }
+
+  return profile;
+};
