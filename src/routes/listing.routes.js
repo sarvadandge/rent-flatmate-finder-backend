@@ -6,7 +6,14 @@ import { validate } from "../middleware/validate.middleware.js";
 
 import { listingSchema } from "../validators/listing.validator.js";
 
-import { createRoomListing, deleteRoomListing, getListingDetails, getMyListings, updateRoomListing } from "../controllers/listing.controller.js";
+import {
+    createRoomListing,
+    deleteRoomListing,
+    getListingDetails,
+    getMyListings,
+    updateRoomListing,
+    markFilled
+} from "../controllers/listing.controller.js";
 
 const router = express.Router();
 
@@ -45,6 +52,13 @@ router.delete(
     authMiddleware,
     authorize("OWNER"),
     deleteRoomListing
+);
+
+router.patch(
+    "/:listingId/fill",
+    authMiddleware,
+    authorize("OWNER"),
+    markFilled
 );
 
 export default router;

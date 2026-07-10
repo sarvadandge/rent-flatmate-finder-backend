@@ -103,3 +103,29 @@ const findOwnerListing = async (listingId, ownerId) => {
 
     return listing;
 };
+
+export const markListingAsFilled = async (
+    listingId,
+    ownerId
+) => {
+    const listing = await findOwnerListing(
+        listingId,
+        ownerId
+    );
+
+    if (listing.isFilled) {
+        throw new ApiError(
+            HTTP_STATUS.CONFLICT,
+            "Listing is already marked as filled"
+        );
+    }
+
+    return prisma.roomListing.update({
+        where: {
+            id: listingId,
+        },
+        data: {
+            isFilled: true,
+        },
+    });
+};
