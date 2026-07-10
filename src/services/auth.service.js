@@ -45,3 +45,22 @@ export const registerUser = async (userData) => {
     token,
   };
 };
+
+export const getCurrentUser = async (userId) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+  });
+
+  if (!user) {
+    throw new ApiError(
+      HTTP_STATUS.NOT_FOUND,
+      "User not found"
+    );
+  }
+
+  const { password, ...safeUser } = user;
+
+  return safeUser;
+};
