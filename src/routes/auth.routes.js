@@ -1,8 +1,8 @@
 import express from "express";
 
-import { register, getCurrentUser } from "../controllers/auth.controller.js";
+import { register, getCurrentUser, login } from "../controllers/auth.controller.js";
 import { validate } from "../middleware/validate.middleware.js";
-import { registerSchema } from "../validators/auth.validator.js";
+import { registerSchema, loginSchema } from "../validators/auth.validator.js";
 import authMiddleware from "../middleware/auth.middleware.js";
 
 const router = express.Router();
@@ -17,6 +17,12 @@ router.get(
   "/me",
   authMiddleware,
   getCurrentUser
+);
+
+router.post(
+  "/login",
+  validate(loginSchema),
+  login
 );
 
 export default router;

@@ -64,3 +64,39 @@ export const getCurrentUser = async (userId) => {
 
   return safeUser;
 };
+
+export const loginUser = async ({ email, password }) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      email,
+    },
+  });
+
+  if (!user) {
+    throw new ApiError(
+      HTTP_STATUS.UNAUTHORIZED,
+      "Invalid email or password"
+    );
+  }
+
+  const isPasswordValid = await bcrypt.compare(
+    password,
+    user.password
+  );
+
+  if (!isPasswordValid) {
+    throw new ApiError(
+      HTTP_STATUS.UNAUTHORIZED,
+      "Invalid email or password"
+    );
+  }
+
+  const token = generateToken(user);
+
+  const { password: _, ...safeUser } = user;
+
+  return {
+    user: safeUser,
+    token,
+  };
+};
