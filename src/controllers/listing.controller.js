@@ -8,6 +8,7 @@ import { getListingById } from "../services/listing.service.js";
 import { updateListing } from "../services/listing.service.js";
 import { deleteListing } from "../services/listing.service.js";
 import { markListingAsFilled } from "../services/listing.service.js";
+import { uploadListingImages } from "../services/listing.service.js";
 
 export const createRoomListing = asyncHandler(async (req, res) => {
     const listing = await createListing(
@@ -92,6 +93,22 @@ export const markFilled = asyncHandler(async (req, res) => {
             HTTP_STATUS.OK,
             listing,
             "Listing marked as filled successfully"
+        )
+    );
+});
+
+export const uploadImages = asyncHandler(async (req, res) => {
+    const images = await uploadListingImages(
+        req.params.listingId,
+        req.user.id,
+        req.files
+    );
+
+    return res.status(HTTP_STATUS.CREATED).json(
+        new ApiResponse(
+            HTTP_STATUS.CREATED,
+            images,
+            "Images uploaded successfully"
         )
     );
 });

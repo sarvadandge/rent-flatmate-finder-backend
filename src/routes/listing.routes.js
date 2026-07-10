@@ -3,6 +3,7 @@ import express from "express";
 import authMiddleware from "../middleware/auth.middleware.js";
 import authorize from "../middleware/authorize.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
+import upload from "../middleware/upload.middleware.js";
 
 import { listingSchema } from "../validators/listing.validator.js";
 
@@ -12,7 +13,8 @@ import {
     getListingDetails,
     getMyListings,
     updateRoomListing,
-    markFilled
+    markFilled,
+    uploadImages
 } from "../controllers/listing.controller.js";
 
 const router = express.Router();
@@ -59,6 +61,14 @@ router.patch(
     authMiddleware,
     authorize("OWNER"),
     markFilled
+);
+
+router.post(
+    "/:listingId/images",
+    authMiddleware,
+    authorize("OWNER"),
+    upload.array("images", 5),
+    uploadImages
 );
 
 export default router;

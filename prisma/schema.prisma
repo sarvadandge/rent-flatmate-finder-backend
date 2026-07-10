@@ -87,7 +87,7 @@ model RoomListing {
   isFilled Boolean @default(false)
 
   ownerId String
-  owner   User @relation("OwnerListings", fields: [ownerId], references: [id], onDelete: Cascade)
+  owner   User   @relation("OwnerListings", fields: [ownerId], references: [id], onDelete: Cascade)
 
   images ListingImage[]
 
@@ -103,6 +103,7 @@ model ListingImage {
   id String @id @default(cuid())
 
   imageUrl String
+  publicId String
 
   listingId String
   listing   RoomListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
@@ -151,7 +152,7 @@ model InterestRequest {
 model ChatRoom {
   id String @id @default(cuid())
 
-  interestRequestId String @unique
+  interestRequestId String          @unique
   interestRequest   InterestRequest @relation(fields: [interestRequestId], references: [id], onDelete: Cascade)
 
   messages Message[]
@@ -166,7 +167,7 @@ model Message {
   chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
 
   senderId String
-  sender   User @relation("UserMessages", fields: [senderId], references: [id])
+  sender   User   @relation("UserMessages", fields: [senderId], references: [id])
 
   content String
 

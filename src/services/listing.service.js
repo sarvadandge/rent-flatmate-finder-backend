@@ -1,6 +1,7 @@
 import prisma from "../config/prisma.js";
 import { HTTP_STATUS } from "../constants/http-status.constants.js";
 import ApiError from "../utils/ApiError.js";
+import { uploadToCloudinary } from "../utils/cloudinary.js";
 
 export const createListing = async (ownerId, listingData) => {
     const listing = await prisma.roomListing.create({
@@ -127,5 +128,48 @@ export const markListingAsFilled = async (
         data: {
             isFilled: true,
         },
+    });
+};
+
+export const uploadListingImages = async (
+    listingId,
+    ownerId,
+    files
+) => {
+    await findOwnerListing(listingId, ownerId);
+
+    const existingImages = await prisma.listingImage.count({
+        where: {
+            listingId,
+        },
+    });
+
+    if (existingImages + files.length > 5) {
+        throw new ApiError(
+            HTTP_STATUS.BAD_REQUEST,
+            "A listing can have a maximum of 5 images"
+        );
+    }
+
+    const uploads = files.map((file) =>
+        uploadToCloudinary(file.buffer)
+    );
+
+    let uploadedFiles = [];
+
+    try {
+        uploadedFiles = await Promise.all(uploads);
+    } catch (error) {
+        await Promise.all(
+            uploadedFiles.map(file =>
+                cloudinary.uploader.destroy(file.public_id)
+            )
+        );
+
+        throw error;
+    }
+
+    return prisma.listingImage.createManyAndReturn({
+        data: uploadedImages,
     });
 };
