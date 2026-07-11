@@ -124,6 +124,8 @@ model CompatibilityScore {
 
   explanation String
 
+  generatedBy String
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
