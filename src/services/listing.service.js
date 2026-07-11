@@ -159,7 +159,10 @@ export const uploadListingImages = async (
     let uploadedFiles = [];
 
     try {
-        uploadedFiles = await Promise.all(uploads);
+        for (const file of files) {
+            const uploaded = await uploadToCloudinary(file.buffer);
+            uploadedFiles.push(uploaded);
+        }
     } catch (error) {
         await Promise.all(
             uploadedFiles.map(file =>
@@ -169,6 +172,12 @@ export const uploadListingImages = async (
 
         throw error;
     }
+
+    const uploadedImages = uploadedFiles.map(file => ({
+        listingId,
+        imageUrl: file.url,
+        publicId: file.public_id,
+    }));
 
     return prisma.listingImage.createManyAndReturn({
         data: uploadedImages,
@@ -213,3 +222,77 @@ export const deleteListingImage = async (
     });
 
 }
+
+export const browseListings = async (
+    page,
+    limit,
+    location,
+    minBudget,
+    maxBudget,
+) => {
+
+    const skip = (page - 1) * limit;
+
+    const where = {
+        isFilled: false,
+    };
+
+    if (location) {
+        where.location = {
+            contains: location,
+            mode: "insensitive",
+        };
+    }
+
+    if (minBudget || maxBudget) {
+        where.rent = {};
+
+        if (minBudget) {
+            where.rent.gte = minBudget;
+        }
+
+        if (maxBudget) {
+            where.rent.lte = maxBudget;
+        }
+    }
+
+    const [listings, total] = await Promise.all([
+        prisma.roomListing.findMany({
+            where,
+            include: {
+                images: true,
+                owner: {
+                    select: {
+                        id: true,
+                        name: true,
+                    },
+                },
+            },
+            orderBy: {
+                createdAt: "desc",
+            },
+            skip,
+            take: limit,
+        }),
+
+        prisma.roomListing.count({
+            where,
+        }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+        listings,
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages,
+            hasNextPage: page < totalPages,
+            hasPreviousPage: page > 1,
+            nextPage: page < totalPages ? page + 1 : null,
+            previousPage: page > 1 ? page - 1 : null,
+        },
+    };
+};

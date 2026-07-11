@@ -10,6 +10,7 @@ import { deleteListing } from "../services/listing.service.js";
 import { markListingAsFilled } from "../services/listing.service.js";
 import { uploadListingImages } from "../services/listing.service.js";
 import { deleteListingImage } from "../services/listing.service.js";
+import { browseListings as browseListingsService } from "../services/listing.service.js";
 
 export const createRoomListing = asyncHandler(async (req, res) => {
     const listing = await createListing(
@@ -129,4 +130,24 @@ export const deleteImage = asyncHandler(async (req, res) => {
         )
     );
 
+});
+
+export const browseListings = asyncHandler(async (req, res) => {
+    const {
+        page,
+        limit,
+        location,
+        minBudget,
+        maxBudget,
+    } = req.validatedData;
+
+    const result = await browseListingsService(page, limit, location, minBudget, maxBudget);
+
+    return res.status(HTTP_STATUS.OK).json(
+        new ApiResponse(
+            HTTP_STATUS.OK,
+            result,
+            "Listings fetched successfully"
+        )
+    );
 });

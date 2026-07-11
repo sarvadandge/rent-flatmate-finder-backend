@@ -15,8 +15,10 @@ import {
     updateRoomListing,
     markFilled,
     uploadImages,
-    deleteImage
+    deleteImage,
+    browseListings
 } from "../controllers/listing.controller.js";
+import { browseListingsSchema } from "../validators/pagination.validator.js";
 
 const router = express.Router();
 
@@ -79,4 +81,11 @@ router.delete(
     deleteImage
 );
 
+router.get(
+    "/",
+    authMiddleware,
+    authorize("TENANT"),
+    validate(browseListingsSchema, "query"),
+    browseListings
+);
 export default router;

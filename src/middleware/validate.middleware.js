@@ -1,10 +1,10 @@
 import ApiResponse from "../utils/ApiResponse.js";
 import { HTTP_STATUS } from "../constants/http-status.constants.js";
 
-export const validate = (schema) => {
+export const validate = (schema, source = "body") => {
   return async (req, res, next) => {
     try {
-      req.validatedData = await schema.parseAsync(req.body);
+      req.validatedData = await schema.parseAsync(req[source]);
 
       next();
     } catch (error) {
