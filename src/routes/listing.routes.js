@@ -14,7 +14,8 @@ import {
     getMyListings,
     updateRoomListing,
     markFilled,
-    uploadImages
+    uploadImages,
+    deleteImage
 } from "../controllers/listing.controller.js";
 
 const router = express.Router();
@@ -69,6 +70,13 @@ router.post(
     authorize("OWNER"),
     upload.array("images", 5),
     uploadImages
+);
+
+router.delete(
+    "/images/:imageId",
+    authMiddleware,
+    authorize("OWNER"),
+    deleteImage
 );
 
 export default router;

@@ -1,3 +1,4 @@
+import cloudinary from "../config/cloudinary.js";
 import prisma from "../config/prisma.js";
 import { HTTP_STATUS } from "../constants/http-status.constants.js";
 import ApiError from "../utils/ApiError.js";
@@ -173,3 +174,42 @@ export const uploadListingImages = async (
         data: uploadedImages,
     });
 };
+
+export const deleteListingImage = async (
+    imageId,
+    ownerId
+) => {
+    const image = await prisma.listingImage.findUnique({
+        where: {
+            id: imageId
+        },
+        include: {
+            listing: true
+        }
+    });
+
+    if (!image) {
+        throw new ApiError(
+            HTTP_STATUS.NOT_FOUND,
+            "Image not found"
+        );
+    }
+
+    if (image.listing.ownerId !== ownerId) {
+        throw new ApiError(
+            HTTP_STATUS.FORBIDDEN,
+            "You are not allowed to perform this action"
+        );
+    }
+
+    await cloudinary.uploader.destroy(
+        image.publicId
+    );
+
+    await prisma.listingImage.delete({
+        where: {
+            id: imageId
+        }
+    });
+
+}

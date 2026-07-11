@@ -9,6 +9,7 @@ import { updateListing } from "../services/listing.service.js";
 import { deleteListing } from "../services/listing.service.js";
 import { markListingAsFilled } from "../services/listing.service.js";
 import { uploadListingImages } from "../services/listing.service.js";
+import { deleteListingImage } from "../services/listing.service.js";
 
 export const createRoomListing = asyncHandler(async (req, res) => {
     const listing = await createListing(
@@ -111,4 +112,21 @@ export const uploadImages = asyncHandler(async (req, res) => {
             "Images uploaded successfully"
         )
     );
+});
+
+export const deleteImage = asyncHandler(async (req, res) => {
+
+    await deleteListingImage(
+        req.params.imageId,
+        req.user.id
+    );
+
+    return res.status(HTTP_STATUS.OK).json(
+        new ApiResponse(
+            HTTP_STATUS.OK,
+            null,
+            "Image deleted successfully"
+        )
+    );
+
 });
