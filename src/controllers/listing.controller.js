@@ -141,7 +141,14 @@ export const browseListings = asyncHandler(async (req, res) => {
         maxBudget,
     } = req.validatedData;
 
-    const result = await browseListingsService(page, limit, location, minBudget, maxBudget);
+    const result = await browseListingsService({
+        tenantUserId: req.user.id,
+        page,
+        limit,
+        location,
+        minBudget,
+        maxBudget,
+    });
 
     return res.status(HTTP_STATUS.OK).json(
         new ApiResponse(

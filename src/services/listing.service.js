@@ -3,6 +3,7 @@ import prisma from "../config/prisma.js";
 import { HTTP_STATUS } from "../constants/http-status.constants.js";
 import ApiError from "../utils/ApiError.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
+import { generateCompatibilityForListing } from "./compatibility.service.js";
 
 export const createListing = async (ownerId, listingData) => {
     const listing = await prisma.roomListing.create({
@@ -11,6 +12,14 @@ export const createListing = async (ownerId, listingData) => {
             ownerId,
         },
     });
+
+    await generateCompatibilityForListing(listing.id)
+        .catch((error) => {
+            console.error(
+                "Compatibility generation failed:",
+                error
+            );
+        });
 
     return listing;
 };
@@ -223,13 +232,27 @@ export const deleteListingImage = async (
 
 }
 
-export const browseListings = async (
+export const browseListings = async ({
+    tenantUserId,
     page,
     limit,
     location,
     minBudget,
     maxBudget,
-) => {
+}) => {
+
+    const tenant = await prisma.tenantProfile.findUnique({
+        where: {
+            userId: tenantUserId,
+        },
+    });
+
+    if (!tenant) {
+        throw new ApiError(
+            HTTP_STATUS.NOT_FOUND,
+            "Tenant profile not found"
+        );
+    }
 
     const skip = (page - 1) * limit;
 
@@ -267,6 +290,16 @@ export const browseListings = async (
                         name: true,
                     },
                 },
+                compatibilityScores: {
+                    where: {
+                        tenantId: tenant.id,
+                    },
+                    select: {
+                        score: true,
+                        explanation: true,
+                        generatedBy: true,
+                    },
+                },
             },
             orderBy: {
                 createdAt: "desc",
@@ -280,10 +313,24 @@ export const browseListings = async (
         }),
     ]);
 
+    listings.sort((a, b) => {
+        const scoreA = a.compatibilityScores[0]?.score ?? 0;
+        const scoreB = b.compatibilityScores[0]?.score ?? 0;
+
+        return scoreB - scoreA;
+    });
+
+    const formattedListings = listings.map(
+        ({ compatibilityScores, ...listing }) => ({
+            ...listing,
+            compatibility: compatibilityScores[0] ?? null,
+        })
+    );
+
     const totalPages = Math.ceil(total / limit);
 
     return {
-        listings,
+        listings: formattedListings,
         pagination: {
             page,
             limit,
