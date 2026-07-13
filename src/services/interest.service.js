@@ -2,6 +2,7 @@ import prisma from "../config/prisma.js";
 import { HTTP_STATUS } from "../constants/http-status.constants.js";
 import ApiError from "../utils/ApiError.js";
 import { getListingById } from "./listing.service.js";
+import { InterestStatus } from "@prisma/client";
 
 export const createInterestRequest = async (
     tenantUserId,
@@ -123,3 +124,105 @@ export const getOwnerInterestRequests = async (ownerId) => {
 
     return formattedRequests;
 };
+
+export const updateInterestStatus = async (
+    ownerId,
+    interestRequestId,
+    status
+) => {
+    const interestRequest =
+        await prisma.interestRequest.findUnique({
+            where: {
+                id: interestRequestId,
+            },
+            include: {
+                listing: true,
+            },
+        });
+
+    if (!interestRequest) {
+        throw new ApiError(
+            HTTP_STATUS.NOT_FOUND,
+            "Interest request not found"
+        );
+    }
+
+    if (
+        interestRequest.listing.ownerId !== ownerId
+    ) {
+        throw new ApiError(
+            HTTP_STATUS.FORBIDDEN,
+            "Unauthorized"
+        );
+    }
+
+    if (
+        interestRequest.status !== "PENDING"
+    ) {
+        throw new ApiError(
+            HTTP_STATUS.BAD_REQUEST,
+            "Interest request has already been processed"
+        );
+    }
+
+    if (status === InterestStatus.DECLINED) {
+
+        return prisma.interestRequest.update({
+
+            where: {
+                id: interestRequest.id,
+            },
+
+            data: {
+                status: InterestStatus.DECLINED,
+            },
+
+        });
+
+    }
+
+    return prisma.$transaction(async (tx) => {
+
+        await tx.interestRequest.update({
+            where: {
+                id: interestRequest.id,
+            },
+            data: {
+                status: "ACCEPTED",
+            },
+        });
+
+        await tx.roomListing.update({
+            where: {
+                id: interestRequest.listingId,
+            },
+            data: {
+                isFilled: true,
+            },
+        });
+
+        await tx.interestRequest.updateMany({
+            where: {
+                listingId: interestRequest.listingId,
+                status: "PENDING",
+                id: {
+                    not: interestRequest.id,
+                },
+            },
+            data: {
+                status: InterestStatus.DECLINED,
+            },
+        });
+
+        const chatRoom = await tx.chatRoom.create({
+            data: {
+                interestRequestId:
+                    interestRequest.id,
+            },
+        });
+        
+        return chatRoom;
+
+    });
+
+}
