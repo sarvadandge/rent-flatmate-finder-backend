@@ -3,15 +3,22 @@ import { HTTP_STATUS } from "../constants/http-status.constants.js";
 import ApiError from "../utils/ApiError.js";
 import { getListingById } from "./listing.service.js";
 import { InterestStatus } from "@prisma/client";
+import {
+    sendInterestCreatedEmail,
+    sendInterestAcceptedEmail,
+    sendInterestDeclinedEmail,
+} from "./mail.service.js";
 
 export const createInterestRequest = async (
     tenantUserId,
     listingId
 ) => {
-    // Find tenant profile
     const tenant = await prisma.tenantProfile.findUnique({
         where: {
             userId: tenantUserId,
+        },
+        include: {
+            user: true,
         },
     });
 
@@ -22,10 +29,8 @@ export const createInterestRequest = async (
         );
     }
 
-    // Reuse existing listing service
     const listing = await getListingById(listingId);
 
-    // Listing already filled
     if (listing.isFilled) {
         throw new ApiError(
             HTTP_STATUS.BAD_REQUEST,
@@ -33,7 +38,6 @@ export const createInterestRequest = async (
         );
     }
 
-    // Prevent owner from expressing interest
     if (listing.ownerId === tenantUserId) {
         throw new ApiError(
             HTTP_STATUS.BAD_REQUEST,
@@ -41,7 +45,6 @@ export const createInterestRequest = async (
         );
     }
 
-    // Prevent duplicate requests
     const existingInterest = await prisma.interestRequest.findUnique({
         where: {
             tenantId_listingId: {
@@ -58,13 +61,25 @@ export const createInterestRequest = async (
         );
     }
 
-    // Create interest request
-    return prisma.interestRequest.create({
+    const interestRequest = await prisma.interestRequest.create({
         data: {
             tenantId: tenant.id,
             listingId,
         },
     });
+
+    try {
+        await sendInterestCreatedEmail({
+            ownerName: listing.owner.name,
+            ownerMail: listing.owner.email,
+            tenantName: tenant.user.name,
+            listingTitle: listing.title,
+        });
+    } catch (error) {
+        console.error("Error sending interest created email:", error);
+    }
+
+    return interestRequest;
 };
 
 export const getOwnerInterestRequests = async (ownerId) => {
@@ -86,43 +101,28 @@ export const getOwnerInterestRequests = async (ownerId) => {
                     },
                 },
             },
-
             listing: {
                 include: {
                     compatibilityScores: true,
                 },
             },
         },
-
         orderBy: {
             createdAt: "desc",
         },
     });
 
-    const compatibilityScores = await prisma.compatibilityScore.findMany({
-        where: {
-            OR: requests.map((request) => ({
-                tenantId: request.tenantId,
-                listingId: request.listingId,
-            })),
-        },
-    });
-
-    const formattedRequests = requests.map((request) => ({
+    return requests.map((request) => ({
         ...request,
-
         compatibility:
             request.listing.compatibilityScores.find(
                 (score) => score.tenantId === request.tenantId
             ) ?? null,
-
         listing: {
             ...request.listing,
             compatibilityScores: undefined,
         },
     }));
-
-    return formattedRequests;
 };
 
 export const updateInterestStatus = async (
@@ -130,15 +130,19 @@ export const updateInterestStatus = async (
     interestRequestId,
     status
 ) => {
-    const interestRequest =
-        await prisma.interestRequest.findUnique({
-            where: {
-                id: interestRequestId,
+    const interestRequest = await prisma.interestRequest.findUnique({
+        where: {
+            id: interestRequestId,
+        },
+        include: {
+            listing: true,
+            tenant: {
+                include: {
+                    user: true,
+                },
             },
-            include: {
-                listing: true,
-            },
-        });
+        },
+    });
 
     if (!interestRequest) {
         throw new ApiError(
@@ -147,18 +151,14 @@ export const updateInterestStatus = async (
         );
     }
 
-    if (
-        interestRequest.listing.ownerId !== ownerId
-    ) {
+    if (interestRequest.listing.ownerId !== ownerId) {
         throw new ApiError(
             HTTP_STATUS.FORBIDDEN,
             "Unauthorized"
         );
     }
 
-    if (
-        interestRequest.status !== "PENDING"
-    ) {
+    if (interestRequest.status !== InterestStatus.PENDING) {
         throw new ApiError(
             HTTP_STATUS.BAD_REQUEST,
             "Interest request has already been processed"
@@ -166,29 +166,35 @@ export const updateInterestStatus = async (
     }
 
     if (status === InterestStatus.DECLINED) {
-
-        return prisma.interestRequest.update({
-
+        const updatedRequest = await prisma.interestRequest.update({
             where: {
                 id: interestRequest.id,
             },
-
             data: {
                 status: InterestStatus.DECLINED,
             },
-
         });
 
+        try {
+            await sendInterestDeclinedEmail({
+                tenantName: interestRequest.tenant.user.name,
+                tenantMail: interestRequest.tenant.user.email,
+                listingTitle: interestRequest.listing.title,
+            });
+        } catch (error) {
+            console.error("Error sending interest declined email:", error);
+        }
+
+        return updatedRequest;
     }
 
-    return prisma.$transaction(async (tx) => {
-
+    const result = await prisma.$transaction(async (tx) => {
         await tx.interestRequest.update({
             where: {
                 id: interestRequest.id,
             },
             data: {
-                status: "ACCEPTED",
+                status: InterestStatus.ACCEPTED,
             },
         });
 
@@ -201,10 +207,27 @@ export const updateInterestStatus = async (
             },
         });
 
+        const declinedRequests = await tx.interestRequest.findMany({
+            where: {
+                listingId: interestRequest.listingId,
+                status: InterestStatus.PENDING,
+                id: {
+                    not: interestRequest.id,
+                },
+            },
+            include: {
+                tenant: {
+                    include: {
+                        user: true,
+                    },
+                },
+            },
+        });
+
         await tx.interestRequest.updateMany({
             where: {
                 listingId: interestRequest.listingId,
-                status: "PENDING",
+                status: InterestStatus.PENDING,
                 id: {
                     not: interestRequest.id,
                 },
@@ -216,13 +239,45 @@ export const updateInterestStatus = async (
 
         const chatRoom = await tx.chatRoom.create({
             data: {
-                interestRequestId:
-                    interestRequest.id,
+                interestRequestId: interestRequest.id,
             },
         });
-        
-        return chatRoom;
 
+        return {
+            chatRoom,
+            declinedRequests,
+        };
     });
 
-}
+    try {
+        await sendInterestAcceptedEmail({
+            tenantName: interestRequest.tenant.user.name,
+            tenantMail: interestRequest.tenant.user.email,
+            listingTitle: interestRequest.listing.title,
+        });
+    } catch (error) {
+        console.error(
+            `Failed to send accepted email to ${interestRequest.tenant.user.email}`,
+            error
+        );
+    }
+
+    await Promise.all(
+        result.declinedRequests.map(async (request) => {
+            try {
+                await sendInterestDeclinedEmail({
+                    tenantName: request.tenant.user.name,
+                    tenantMail: request.tenant.user.email,
+                    listingTitle: interestRequest.listing.title,
+                });
+            } catch (error) {
+                console.error(
+                    `Failed to send decline email to ${request.tenant.user.email}`,
+                    error
+                );
+            }
+        })
+    );
+
+    return result.chatRoom;
+};
