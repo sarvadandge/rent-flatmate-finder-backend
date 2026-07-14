@@ -1,0 +1,13 @@
+services:
+  backend:
+    build: .
+
+    container_name: rent-flatmate-finder-backend
+
+    ports:
+      - "5000:5000"
+
+    env_file:
+      - .env
+
+    restart: unless-stopped
