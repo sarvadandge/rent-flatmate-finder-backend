@@ -1,10 +1,15 @@
 import express from "express";
 
-import { register, getCurrentUser, login } from "../controllers/auth.controller.js";
+import {
+  register,
+  getCurrentUser,
+  login,
+  logout,
+} from "../controllers/auth.controller.js";
+
 import { validate } from "../middleware/validate.middleware.js";
 import { registerSchema, loginSchema } from "../validators/auth.validator.js";
 import authMiddleware from "../middleware/auth.middleware.js";
-import authorize from "../middleware/authorize.middleware.js";
 
 const router = express.Router();
 
@@ -14,16 +19,22 @@ router.post(
   register
 );
 
-router.get(
-  "/me",
+router.post(
+  "/logout",
   authMiddleware,
-  getCurrentUser
+  logout
 );
 
 router.post(
   "/login",
   validate(loginSchema),
   login
+);
+
+router.get(
+  "/me",
+  authMiddleware,
+  getCurrentUser
 );
 
 export default router;
