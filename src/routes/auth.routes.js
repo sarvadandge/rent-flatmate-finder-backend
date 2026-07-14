@@ -26,14 +26,4 @@ router.post(
   login
 );
 
-router.get(
-  "/owner-test",
-  authMiddleware,
-  authorize("OWNER"),
-  (req, res) => {
-    res.json({
-      message: "Welcome Owner"
-    });
-  }
-);
 export default router;
