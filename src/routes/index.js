@@ -17,18 +17,4 @@ router.use("/compatibility", compatibilityRoutes);
 router.use("/interest", interestRoutes);
 router.use("/chat", chatRoutes);
 
-router.get("/test-email", async (req, res) => {
-
-  await sendEmail({
-    to: "sarvad29@gmail.com",
-    subject: "Test Email",
-    html: "<h1>Hello from Rent & Flatmate Finder!</h1>",
-  });
-
-  res.json({
-    success: true,
-  });
-
-});
-
 export default router;
